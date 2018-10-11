@@ -1,0 +1,21 @@
+inputs=self.GetInput()
+outputs=self.GetOutput()
+numCells=inputs.GetNumberOfCells()
+scalar_v=inputs.GetPointData().GetArray("v")
+
+cell_scalars=vtk.vtkFloatArray()
+cell_scalars.SetNumberOfComponents(1)
+cell_scalars.SetNumberOfTuples(numCells)
+cell_scalars.SetName("Cell V")
+
+for i in range(numCells):
+    cell=inputs.GetCell(i)
+    pid_1=cell.GetPointId(0)
+    pid_2=cell.GetPointId(1)
+    pid_3=cell.GetPointId(2)
+    pid_4=cell.GetPointId(3)
+    func_value=(scalar_v.GetTuple1(pid_2)+scalar_v.GetTuple1(pid_1)+scalar_v.GetTuple1(pid_4)+scalar_v.GetTuple1(pid_3))/4
+    cell_scalars.SetTuple1(i,func_value)    
+        
+
+outputs.GetCellData().AddArray(cell_scalars)

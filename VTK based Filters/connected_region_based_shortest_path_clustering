@@ -1,0 +1,140 @@
+from sklearn import cluster
+import numpy as np
+from scipy import spatial
+import vtk
+
+#import scalar field and critical point data objects
+
+scalar_field=self.GetInputDataObject(0,0)
+maxima_points=self.GetInputDataObject(0,1)
+base_field=self.GetInputDataObject(0,2)
+
+maxima_point_id=maxima_points.GetPointData().GetArray("VertexIdentifiers")
+num_points=maxima_points.GetNumberOfPoints()
+
+point_region_id=scalar_field.GetPointData().GetArray("RegionId")
+num_regions = int(np.max(point_region_id)+1)
+
+dist_matrix=np.full((num_points,num_points),400)
+
+dijkstra=vtk.vtkDijkstraGraphGeodesicPath()
+dijkstra.SetInputData(scalar_field)
+
+
+locator=vtk.vtkCellLocator()
+locator.SetDataSet(base_field)
+locator.BuildLocator()
+cellIds=vtk.vtkIdList()
+
+cell_v=base_field.GetCellData().GetArray("Cell V")
+
+co_ords=np.empty((0,3))
+for i in range(num_points):
+    co_ords=np.append(co_ords,[maxima_points.GetPoint(i)],axis=0)
+
+for i in range(num_points):
+    for j in range(i+1,num_points):
+        min_v=1000
+        max_v=0
+        av_v=0
+        p0 = [0,0,0]
+        p1 = [0,0,0]
+        dist = 0.0
+        region_1=point_region_id.GetTuple1(int(maxima_point_id.GetTuple1(i)))
+        region_2=point_region_id.GetTuple1(int(maxima_point_id.GetTuple1(j)))
+        if(region_1!=region_2):
+            continue
+        dijkstra.SetStartVertex(int(maxima_point_id.GetTuple1(i)))
+        dijkstra.SetEndVertex(int(maxima_point_id.GetTuple1(j)))
+        dijkstra.Update()
+        pts = dijkstra.GetOutput().GetPoints()
+        for ptId in range(pts.GetNumberOfPoints()-1):
+            pts.GetPoint(ptId, p0)  
+            pts.GetPoint(ptId+1, p1)
+            dist += math.sqrt(vtk.vtkMath.Distance2BetweenPoints(p0, p1))
+        dist_matrix[i][j]=dist
+        dist_matrix[j][i]=dist
+        locator.FindCellsAlongLine(co_ords[i],co_ords[j],0.001,cellIds)
+        for k in range(cellIds.GetNumberOfIds()):
+            if(cell_v.GetTuple1(cellIds.GetId(k))<min_v):
+                min_v=cell_v.GetTuple1(cellIds.GetId(k))
+                min_cell_id=cellIds.GetId(k)
+            if(cell_v.GetTuple1(cellIds.GetId(k))>max_v):
+                max_v=cell_v.GetTuple1(cellIds.GetId(k))
+        if(min_v>0):
+             if(min_v>1):
+                 dist_matrix[i][j]=dist_matrix[i][j]-min_v
+             else:
+                 dist_matrix[i][j]=dist_matrix[i][j]-min_v   
+             dist_matrix[j][i]=dist_matrix[i][j] 
+        if(min_v<0):
+             dist_matrix[i][j]=dist_matrix[i][j]-min_v
+             dist_matrix[j][i]=dist_matrix[i][j]
+
+region_array=[[0 for col in range(0)]for row in range(num_regions)]
+cluster_assign=np.full(num_points,0)
+
+median_dist=-np.median(dist_matrix)
+
+for i in range(num_points):
+    region_array[int(point_region_id.GetTuple1(int(maxima_point_id.GetTuple1(i))))].append(i)
+    
+
+prev_max=0
+
+for k in range(num_regions):
+    if(len(region_array[k])==1):
+        cluster_assign[region_array[k][0]]=prev_max
+        prev_max+=1 
+        continue
+    if(len(region_array[k])==2):
+        cluster_assign[region_array[k][0]]=prev_max
+        cluster_assign[region_array[k][1]]=prev_max
+        prev_max+=1 
+        continue
+        
+    print(len(region_array[k]))
+    num_cluster=int(len(region_array[k]))
+    new_dist=np.full((num_cluster,num_cluster),0)
+    #print(new_dist)
+
+    for i in range(num_cluster):
+        for j in range(i+1,num_cluster):
+            new_dist[i][j]=dist_matrix[region_array[k][i]][region_array[k][j]]
+            new_dist[j][i]=new_dist[i][j]
+
+#print(new_dist)
+    
+        
+    if(num_cluster==0):
+        continue
+
+    sim_matrix=np.negative(new_dist)
+
+    af_clustering = cluster.AffinityPropagation(preference=np.full(num_cluster,median_dist/2),affinity='precomputed')
+    af_clustering.fit(sim_matrix)
+    clusters=af_clustering.labels_ + prev_max
+    prev_max=np.max(clusters)+1
+    #print(clusters)
+
+    for i in range(num_cluster):
+        cluster_assign[region_array[k][i]]=clusters[i]
+
+
+
+
+cluster_id=vtk.vtkIntArray()
+cluster_id.SetNumberOfComponents(1)
+cluster_id.SetNumberOfTuples(num_points)
+cluster_id.SetName("Cluster ID")
+
+
+
+for i in range(num_points):
+    cluster_id.SetTuple1(i,cluster_assign[i])
+
+
+clustered_output=self.GetOutput()
+maxima_points.GetPointData().AddArray(cluster_id)
+clustered_output.ShallowCopy(maxima_points)
+

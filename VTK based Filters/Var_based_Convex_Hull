@@ -1,0 +1,46 @@
+import numpy as np
+import vtk
+
+maxima_points=self.GetInputDataObject(0,0)
+num_points=maxima_points.GetNumberOfPoints()
+
+cluster_ids=maxima_points.GetPointData().GetArray("Point Cluster ID")
+print(cluster_ids)
+num_clusters=int(np.max(cluster_ids)+1)
+
+cluster_point_array=[[[0 for col in range(3)]for row in range(0)]for clusters in range(num_clusters)]
+
+for i in range(num_points):
+    cluster_point_array[int(cluster_ids.GetTuple1(i))].append(maxima_points.GetPoint(i))
+
+appendFilter=vtk.vtkAppendPolyData()
+delaunay_objects=vtk.vtkPolyData()
+cleanFilter = vtk.vtkCleanPolyData()
+
+hull_objects=vtk.vtkMultiBlockDataSet()
+
+k=0
+
+for i in range(num_clusters):
+    delaunay_points=vtk.vtkPoints()
+    if(len(cluster_point_array[i])==0):
+        continue
+    for j in range(len(cluster_point_array[i])):
+        delaunay_points.InsertNextPoint(cluster_point_array[i][j][0],cluster_point_array[i][j][1],cluster_point_array[i][j][2])
+    convex = vtk.vtkConvexHull2D()
+    aPolyData= vtk.vtkPolyData()
+    aPolyData.SetPoints(delaunay_points)
+    convex.SetInputData(aPolyData)
+    convex.Update()
+    if(convex.GetOutput().GetNumberOfPoints()>0):
+        hull_objects.SetBlock(k,convex.GetOutput())
+        k=k+1
+        appendFilter.AddInputData(delaunay_objects)
+        appendFilter.AddInputData(convex.GetOutput())
+        cleanFilter.SetInputConnection(appendFilter.GetOutputPort())
+        cleanFilter.Update()   
+        delaunay_objects=appendFilter.GetOutput()
+
+print(hull_objects)
+#print(delaunay_objects)
+self.GetOutput().ShallowCopy(delaunay_objects)

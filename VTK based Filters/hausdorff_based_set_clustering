@@ -1,0 +1,61 @@
+import vtk
+import numpy as np
+from scipy.spatial.distance import directed_hausdorff
+from sklearn import cluster
+
+maxima_regions=self.GetInputDataObject(0,0)
+
+#print(maxima_regions.GetBlock(0))
+#print(polydata_1.GetPoint(0))
+num_cells=maxima_regions.GetNumberOfCells()
+
+dist_matrix=np.full((num_cells,num_cells),0.0)
+
+for i in range(num_cells):
+    region_1=maxima_regions.GetCell(i).GetPoints()
+    co_ords_1=np.empty((0,3))        
+    for k in range(region_1.GetNumberOfPoints()):
+        co_ords_1=np.append(co_ords_1,[region_1.GetPoint(k)],axis=0)
+    for j in range(i,num_cells):
+        region_2=maxima_regions.GetCell(j).GetPoints()        
+        co_ords_2=np.empty((0,3))        
+        for m in range(region_2.GetNumberOfPoints()):
+            co_ords_2=np.append(co_ords_2,[region_2.GetPoint(m)],axis=0)
+        if(directed_hausdorff(co_ords_2,co_ords_1)[0]<directed_hausdorff(co_ords_1,co_ords_2)[0]):
+            dist_matrix[i][j]=directed_hausdorff(co_ords_2,co_ords_1)[0]
+        else:
+            dist_matrix[i][j]=directed_hausdorff(co_ords_1,co_ords_2)[0]      
+        dist_matrix[j][i]=dist_matrix[i][j]
+
+#print(dist_matrix)
+sim_matrix=np.negative(dist_matrix)
+
+
+
+af_clustering = cluster.AffinityPropagation(preference=np.full(num_cells,(np.median(sim_matrix)/2)),affinity='precomputed')
+af_clustering.fit(sim_matrix)
+clusters=af_clustering.labels_
+
+cluster_id=vtk.vtkIntArray()
+cluster_id.SetNumberOfComponents(1)
+cluster_id.SetNumberOfTuples(num_cells)
+cluster_id.SetName("Cluster ID")
+
+point_cluster_id=vtk.vtkIntArray()
+point_cluster_id.SetNumberOfComponents(1)
+point_cluster_id.SetNumberOfTuples(maxima_regions.GetNumberOfPoints())
+point_cluster_id.SetName("Point Cluster ID")
+
+for i in range(num_cells):
+    cluster_id.SetTuple1(i,clusters[i])
+    cell_points=maxima_regions.GetCell(i).GetPointIds()
+    for j in range(cell_points.GetNumberOfIds()):
+        #print(cell_points.GetId(j))
+        #print(clusters[i])
+        point_cluster_id.SetTuple1(cell_points.GetId(j),clusters[i])
+
+print(point_cluster_id)
+clustered_output=self.GetOutput()
+maxima_regions.GetPointData().AddArray(point_cluster_id)
+maxima_regions.GetCellData().AddArray(cluster_id)
+clustered_output.ShallowCopy(maxima_regions)
