@@ -1,4 +1,3 @@
 # README #
 
-Paraview programmable filters to set up a feature identification and tracking pipeline on 2-D scalar fields 
-
+Paraview scripts and statefiles to run RWP Identification algorithm. 
