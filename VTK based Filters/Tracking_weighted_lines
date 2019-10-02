@@ -1,0 +1,181 @@
+import vtk
+
+
+from shapely.geometry import Polygon
+
+
+import numpy as np
+
+
+
+current_hull_set=self.GetInputDataObject(0,0)
+
+#print(current_hull_set)
+
+num_new_cells=current_hull_set.GetNumberOfCells()
+
+time_step=(self.GetInputDataObject(0,0).GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP()))
+
+
+writer=vtk.vtkPolyDataWriter()
+
+
+if(time_step==0):
+
+    writer.SetInputData(current_hull_set)
+
+    writer.SetFileName("/home/karran/Data/Track_test/track_"+str(time_step)+".vtp")
+
+    writer.Write()    
+
+
+
+if(time_step!=0):
+    prev_time_step=time_step-1
+else:
+    prev_time_step=time_step
+
+
+reader=vtk.vtkPolyDataReader()
+
+reader.SetFileName("/home/karran/Data/Track_test/track_"+str(prev_time_step)+".vtp")
+
+reader.Update()
+
+
+
+prev_track_info=(reader.GetOutput())
+
+cell_track=np.full((num_new_cells),-1)
+
+
+current_tracks = current_hull_set.GetCellData().GetArray("Track ID")
+
+prev_tracks = prev_track_info.GetCellData().GetArray("Track ID")
+
+prev_cell=current_hull_set.GetCellData().GetArray("Prev Cell ID")
+
+
+if(time_step==0):
+    edge_weight = vtk.vtkFloatArray()
+    edge_weight.SetNumberOfComponents(0)
+    edge_weight.SetName("Line Weight")
+
+
+#print(current_tracks.GetTuple1(0))
+
+#print(prev_track_info)
+
+num_old_cells=prev_track_info.GetNumberOfCells()
+
+appendFilter=vtk.vtkAppendPolyData()
+
+
+
+if(time_step==0):
+    track_lines=vtk.vtkPolyData()
+else:
+    reader2=vtk.vtkPolyDataReader()
+    reader2.SetFileName("/home/karran/Data/Track_test/track_lines_"+str(prev_time_step)+".vtp")
+    reader2.Update()
+    track_lines=reader2.GetOutput()
+    edge_weight=track_lines.GetCellData().GetArray("Line Weight")
+    print(edge_weight)    
+    print(track_lines)
+
+
+if(time_step==0):
+    cells_to_be_tracked=[]
+    new_cells_to_be_tracked=[]
+    cells_to_be_tracked=np.append(cells_to_be_tracked,1)
+else:
+    cells_to_be_tracked=np.load("/home/karran/Data/Track_test/track_cells_"+str(prev_time_step)+".npy")
+    new_cells_to_be_tracked=[]
+
+num_old_cells=cells_to_be_tracked.size
+
+for i in range(num_new_cells):
+
+    poly_boundary=[]
+
+    points=current_hull_set.GetCell(i).GetPoints()
+
+    for k in range(points.GetNumberOfPoints()):
+
+        poly_boundary.append(points.GetPoint(k))
+
+    current_hull=Polygon(poly_boundary)
+
+    #print(current_hull)
+
+    max_overlap_area=0
+
+    current_centre=current_hull.centroid
+
+    for j in range(num_old_cells):
+
+        poly_boundary=[]
+
+        points=prev_track_info.GetCell(int(cells_to_be_tracked[j])).GetPoints()
+
+        for m in range(points.GetNumberOfPoints()):
+
+            poly_boundary.append(points.GetPoint(m))
+
+        prev_hull=Polygon(poly_boundary)
+
+        if(current_hull.intersects(prev_hull)):
+            new_cells_to_be_tracked=np.append(new_cells_to_be_tracked,i)      
+            overlap_poly=current_hull.intersection(prev_hull)            
+            max_overlap_area=overlap_poly.area
+            union_area=current_hull.union(prev_hull).area
+            jaccard_index = max_overlap_area/union_area
+            if(time_step==0):
+                edge_weight.InsertNextValue(jaccard_index)
+            else:
+                edge_weight.InsertNextValue(jaccard_index)
+            
+                
+            cell_track[i]=j
+            old_centre=prev_hull.centroid
+            track_points=vtk.vtkPoints()    
+            line=vtk.vtkLine()
+            lines=vtk.vtkCellArray()
+            track_points.InsertNextPoint(old_centre.x,old_centre.y,0)
+            track_points.InsertNextPoint(current_centre.x,current_centre.y,0)
+            line.GetPointIds().SetId(0,0)
+            line.GetPointIds().SetId(0,1)
+            lines.InsertNextCell(line)
+            linesPolyData=vtk.vtkPolyData()
+            linesPolyData.SetPoints(track_points)
+            linesPolyData.SetLines(lines)
+            appendFilter.AddInputData(track_lines)
+            appendFilter.AddInputData(linesPolyData)
+            appendFilter.Update()
+            track_lines=appendFilter.GetOutput()
+
+track_lines.GetCellData().AddArray(edge_weight)
+       
+num_points=track_lines.GetNumberOfPoints()
+
+
+current_tracks.Modified()
+
+prev_cell.Modified()
+
+tracked_output=self.GetOutput()
+
+tracked_output.DeepCopy(track_lines)
+
+writer.SetInputData(current_hull_set)
+
+writer.SetFileName("/home/karran/Data/Track_test/track_"+str(time_step)+".vtp")
+
+writer.Write()
+
+writer2=vtk.vtkPolyDataWriter()
+writer2.SetInputData(track_lines)
+writer2.SetFileName("/home/karran/Data/Track_test/track_lines_"+str(time_step)+".vtp")
+writer2.Write()
+
+np.save("/home/karran/Data/Track_test/track_cells_"+str(time_step),new_cells_to_be_tracked)
