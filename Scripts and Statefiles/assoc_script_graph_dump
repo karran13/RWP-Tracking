@@ -1,0 +1,12 @@
+#!/bin/bash
+PARAVIEW_BIN='/home/karran/paraview_super_build/install/bin/pvpython'
+SCRIPT_STATEFILE_FOLDER='/home/karran/SciVis/RWP/Codebase/Resubmission Files/'
+RESULT_FOLDER='/home/karran/SciVis/RWP/Results/New Scripts Test/2007_300_area.nc/'
+
+
+MAX_MIN_ASSOC_SCRIPT='assoc_lines_graph_dump.py'
+
+$PARAVIEW_BIN "$SCRIPT_STATEFILE_FOLDER$MAX_MIN_ASSOC_SCRIPT" "$RESULT_FOLDER" "$SCRIPT_STATEFILE_FOLDER"
+
+
+
