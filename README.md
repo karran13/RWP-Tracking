@@ -2,6 +2,10 @@
 
 Repository containing code and ParaView statefiles to execute and visualize output from our Rossby Wave Identification algorithm as detailed in the paper 'An Integrated Geometric and Topological Approach for the Identification and Visual Analysis of Rossby Wave Packets'.
 
+While fully funcitonal code for our algorithm is present in the repository, we are currently still in the process of developing a user friendly API package for convenient use of our algorithm. Hence, please contact us if you wish to use the code in its current form. 
+
+(e-mail: karran13 [AT] gmail.com)
+
 ---
 
 ## Requirements
