@@ -33,7 +33,7 @@ All datasets used for testing and validation are available at the ECMWF website:
 
 ## Copyright
 
-Copyright (c) 2019 Visualization & Graphics Lab (VGL), Indian Institute of Science. All rights reserved.
+Copyright (c) 2020 Visualization & Graphics Lab (VGL), Indian Institute of Science. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
