@@ -2,9 +2,10 @@
 
 Repository containing code and ParaView statefiles to execute and visualize output from the Rossby Wave Identification algorithm as detailed in the paper 
 
-An Integrated Geometric and Topological Approach for the Identification and Visual Analysis of Rossby Wave Packets.
-Karran Pandey, Joy Merwin Monteiro, and Vijay Natarajan.
-2020, to appear. 
+An Integrated Geometric and Topological Approach for the Identification and Visual Analysis of Rossby Wave Packets.  
+Karran Pandey, Joy Merwin Monteiro, and Vijay Natarajan.  
+Monthly Weather Review, 2020.  
+https://journals.ametsoc.org/doi/abs/10.1175/MWR-D-20-0014.1
 
 While fully funcitonal code for our algorithm is present in the repository, we are currently still in the process of developing a user friendly API package for convenient use of our algorithm. Hence, please contact us if you wish to use the code in its current form. 
 
