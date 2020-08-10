@@ -28,29 +28,43 @@ To compile and execute this code, you will need installed ParaView binaries (tes
 
 The python scripts for the pipeline can be found in the Python_Only_version folder. The scripts and their individual input formats are described below: 
 
-1. data_script.py - This script converts an input meridional wind field in .nc format to the desired .vtk format scalar field for further processing. To run the script, the following terminal command is to be executed - 
+### data_script.py 
 
-[ParaView Install Directory]/bin/pvpython [Path to .nc file to be converted] [Desired Output Path] [Repo Directory]/Python_Only_version/
+This script converts an input meridional wind field in .nc format to the desired .vtk format scalar field for further processing. To run the script, execute the following command in the terminal: 
 
-This will store a folder with the name of the nc file in the desired output path containing scalar_field.vtk files for each timestep in the .nc file. 
+`[ParaView Install Directory]/bin/pvpython [Path to .nc file to be converted] [Desired Output Path] [Repo Directory]/Python_Only_version` 
 
-2. cluster_max.py/cluster_min.py - These scripts take as input the meridional wind field in .vtk format and output the maxima and minima along with their cluster IDs in a vtu format. The vtu can be directly visualized in ParaView. To specify the meridional wind field path, one must modify the following line in the python script - 
+This will store a folder with the name of the nc file in the desired output path containing scalar_field.vtk files for each timestep     in the .nc file. 
 
-file_reader.SetFileName('[path to scalar_field.vtk]')
+### cluster_max.py/cluster_min.py 
+
+These scripts take as input the meridional wind field in .vtk format and output the maxima and minima along with their cluster IDs in a vtu format. The vtu can be directly visualized in ParaView. To specify the meridional wind field path, one must modify the following line in the python script - 
+
+   `file_reader.SetFileName('[path to scalar_field.vtk]')`
  
-3. graph_computation.py - This script takes as input the clustered maxima and minima in vtu format along with the meridional wind field in vtk format, and outputs the final RWP graph in the vtu format. The output vtu can again be visualized in ParaView. Further it is stored such that subsequent points in the output list constitute a line (for e.g the first and second point in the output list form a line, the third and fourth form a line and so on). This ordered storage allows for easily saving to csv format from within ParaView, or using a csvFileWriter in vtk without losing access to the topology of the graph. To specify input clustered maxima/minima and scalar field, the following paths in the script must be modified: 
+### graph_computation.py 
 
-file_reader.SetFileName('clustered_max.vtu') - maxima
+This script takes as input the clustered maxima and minima in vtu format along with the meridional wind field in vtk format. It outputs the final RWP graph in the vtu format. The output vtu can again be visualized in ParaView. 
 
-file_reader.SetFileName('clustered_min.vtu') - minima
+Further, the RWP graph is stored such that subsequent points in the output list constitute a line (for e.g the first and second point in the output list form a line, the third and fourth form a line and so on). This ordered storage allows for easily saving to csv format from within ParaView, or using a csvFileWriter in vtk without losing access to the topology of the graph. 
 
-file_reader.SetFileName('forecast_bust_0.vtk') - scalar field
+To specify input clustered maxima/minima and scalar field, the following paths in the script must be modified: 
 
-The code further contains access to modifiable thresholds - the scalar pruning threshold and the edge threshold as described in our paper. The following lines must be modified to change the thresholds:
+   `file_reader.SetFileName('clustered_max.vtu')` - maxima
 
-scalar_pruned_assoc_graph = scalarThresh(assoc_graph,"Min Scalar Intensity",scalar_thresh,100) - for scalar threshold change the value of scalar_thresh in this line
+   `file_reader.SetFileName('clustered_min.vtu')` - minima
 
-edge_wt_pruned_graph = scalarThresh(edge_wted_graph,"Updated Dist",edge_thresh,1000) - for edge threshold change the value of edge_thresh in this line
+   `file_reader.SetFileName('forecast_bust_0.vtk')` - scalar field
+
+This script further contains access to the modifiable thresholds. Namely, the scalar pruning threshold and the edge threshold as described in our paper. The following lines must be modified to change the thresholds:
+
+to modify the scalar threshold change the value of scalar_thresh in this line:
+
+   `scalar_pruned_assoc_graph = scalarThresh(assoc_graph,"Min Scalar Intensity",scalar_thresh,100)` 
+
+to modify the edge threshold change the value of edge_thresh in this line:
+
+   `edge_wt_pruned_graph = scalarThresh(edge_wted_graph,"Updated Dist",edge_thresh,1000)` 
 
 ---
 
